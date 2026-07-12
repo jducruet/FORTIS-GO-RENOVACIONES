@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Segurotoy · Prototipo flujo WhatsApp</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: #1c1e21;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 32px;
+    padding: 32px 16px;
+    flex-wrap: wrap;
+  }
+
+  /* ---------- Panel lateral de control ---------- */
+  .panel {
+    width: 300px;
+    background: #26292e;
+    border-radius: 12px;
+    padding: 20px;
+    color: #d7dade;
+  }
+  .panel h1 { font-size: 17px; font-weight: 600; margin-bottom: 4px; color: #fff; }
+  .panel p  { font-size: 13px; line-height: 1.5; color: #9aa0a8; margin-bottom: 16px; }
+  .panel button {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    background: #128C7E;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+  .panel button:hover { background: #0e7265; }
+  .panel .ruta {
+    font-size: 12px;
+    background: #1c1e21;
+    border-radius: 8px;
+    padding: 10px;
+    color: #8ecfc4;
+    min-height: 60px;
+    line-height: 1.7;
+    word-break: break-word;
+  }
+  .panel .ruta-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #6b7178; margin: 14px 0 6px; }
+
+  /* ---------- iPhone ---------- */
+  .iphone {
+    width: 375px;
+    background: #000;
+    border-radius: 52px;
+    padding: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    flex-shrink: 0;
+  }
+  .pantalla {
+    background: #ECE5DD;
+    border-radius: 42px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 740px;
+    position: relative;
+  }
+
+  /* Header de WhatsApp */
+  .wa-header { background: #075E54; color: #fff; padding: 12px 14px 10px; flex-shrink: 0; }
+  .isla { width: 118px; height: 30px; background: #000; border-radius: 16px; margin: 0 auto 10px; }
+  .wa-header-fila { display: flex; align-items: center; gap: 10px; }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: #25D366;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .wa-nombre { flex: 1; }
+  .wa-nombre b { font-size: 16px; font-weight: 600; display: block; }
+  .wa-nombre span { font-size: 12px; color: #B2DFDB; }
+  .wa-iconos { display: flex; gap: 18px; font-size: 18px; }
+
+  /* Chat */
+  .chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 12px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background-image:
+      radial-gradient(circle at 25% 25%, rgba(0,0,0,.015) 2px, transparent 2px),
+      radial-gradient(circle at 75% 75%, rgba(0,0,0,.015) 2px, transparent 2px);
+    background-size: 60px 60px;
+  }
+  .chip {
+    align-self: center;
+    background: #D4E7F5;
+    color: #3a5266;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 8px;
+  }
+  .chip.cifrado { background: #FCF3CF; color: #6b5d1f; max-width: 260px; text-align: center; padding: 6px 10px; }
+
+  .burbuja {
+    max-width: 82%;
+    padding: 7px 9px 5px;
+    font-size: 14px;
+    line-height: 1.45;
+    color: #111;
+    position: relative;
+    animation: entrar .18s ease-out;
+  }
+  @keyframes entrar { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .bot {
+    align-self: flex-start;
+    background: #fff;
+    border-radius: 0 10px 10px 10px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.08);
+  }
+  .usuario {
+    align-self: flex-end;
+    background: #DCF8C6;
+    border-radius: 10px 0 10px 10px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.08);
+  }
+  .hora { font-size: 10.5px; color: #8a8a8a; text-align: right; margin-top: 3px; }
+  .usuario .hora { color: #7a9c6d; }
+  .check { color: #4FC3F7; }
+
+  /* Menú de opciones (list message / quick replies) */
+  .menu {
+    align-self: flex-start;
+    background: #fff;
+    border-radius: 10px;
+    width: 82%;
+    box-shadow: 0 1px 1px rgba(0,0,0,.08);
+    overflow: hidden;
+    animation: entrar .18s ease-out;
+  }
+  .menu-titulo { font-size: 13.5px; color: #111; padding: 8px 10px; }
+  .opcion {
+    border-top: 0.5px solid #e4e4e4;
+    padding: 11px 8px;
+    font-size: 14px;
+    color: #00796B;
+    text-align: center;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    transition: background .12s;
+  }
+  .opcion:hover { background: #f2faf8; }
+  .opcion:active { background: #d8f0ea; }
+  .opcion.desactivada { pointer-events: none; opacity: .45; }
+
+  /* Escribiendo... */
+  .escribiendo {
+    align-self: flex-start;
+    background: #fff;
+    border-radius: 0 10px 10px 10px;
+    padding: 12px 14px;
+    display: flex; gap: 4px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.08);
+  }
+  .escribiendo i {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #b0b0b0;
+    animation: puntito 1.2s infinite;
+  }
+  .escribiendo i:nth-child(2) { animation-delay: .2s; }
+  .escribiendo i:nth-child(3) { animation-delay: .4s; }
+  @keyframes puntito { 0%,60%,100% { transform: none; opacity:.5; } 30% { transform: translateY(-4px); opacity:1; } }
+
+  /* Barra inferior */
+  .wa-input { background: #F0F0F0; padding: 8px 10px 6px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .wa-input .campo {
+    flex: 1;
+    background: #fff;
+    border-radius: 18px;
+    padding: 9px 12px;
+    font-size: 13.5px;
+    color: #9a9a9a;
+  }
+  .wa-input .icono { font-size: 20px; color: #54656F; }
+  .home-bar { background: #F0F0F0; display: flex; justify-content: center; padding: 4px 0 10px; }
+  .home-bar div { width: 130px; height: 5px; background: #000; border-radius: 5px; }
+
+  @media (max-width: 800px) {
+    body { padding: 0; gap: 0; background: #000; }
+    .panel { display: none; }
+    .iphone { width: 100%; max-width: 420px; border-radius: 0; padding: 0; box-shadow: none; }
+    .pantalla { border-radius: 0; height: 100dvh; }
+    .isla { display: none; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Panel de control -->
+  <div class="panel">
+    <h1>Segurotoy · Prototipo</h1>
+    <p>Toca las opciones dentro del teléfono para navegar el flujo. Algunos pasos se reproducen solos (respuestas simuladas del cliente). Todo está definido en el objeto <b>FLUJO</b> del código.</p>
+    <button onclick="reiniciar()">↺ Reiniciar flujo</button>
+    <div class="ruta-label">Ruta recorrida</div>
+    <div class="ruta" id="ruta">inicio</div>
+  </div>
+
+  <!-- iPhone -->
+  <div class="iphone">
+    <div class="pantalla">
+      <div class="wa-header">
+        <div class="isla"></div>
+        <div class="wa-header-fila">
+          <span style="font-size:22px;">‹</span>
+          <div class="avatar">🛡️</div>
+          <div class="wa-nombre">
+            <b>Segurotoy</b>
+            <span id="estado">en línea</span>
+          </div>
+          <div class="wa-iconos"><span>📹</span><span>📞</span></div>
+        </div>
+      </div>
+
+      <div class="chat" id="chat"></div>
+
+      <div class="wa-input">
+        <span class="icono">＋</span>
+        <div class="campo">Mensaje</div>
+        <span class="icono">📷</span>
+        <span class="icono">🎤</span>
+      </div>
+      <div class="home-bar"><div></div></div>
+    </div>
+  </div>
+
+<script>
+/* =====================================================
+   FLUJO DE CONVERSACIÓN — edita aquí
+   Cada nodo tiene:
+   - mensajes: array de textos que envía el bot
+   - menu: { titulo, opciones: [{ etiqueta, destino }] }
+   - fin: true si el nodo cierra la conversación
+   ===================================================== */
+const FLUJO = {
+  inicio: {
+    mensajes: [
+      "¡Hola! 👋 Soy <b>Toy</b>, el asistente virtual de <b>Segurotoy</b>.<br><br>Estoy aquí para ayudarte con el seguro de tu auto. ¿Qué deseas hacer hoy?"
+    ],
+    menu: {
+      titulo: "Elige una opción 👇",
+      opciones: [
+        { etiqueta: "🚗 Cotizar y comprar un seguro de terceros",            destino: "terceros" },
+        { etiqueta: "🛡️ Cotizar un seguro con colisión y robo de mi auto",  destino: "cobertura_completa" },
+        { etiqueta: "👤 Hablar con un agente",                               destino: "agente" }
+      ]
+    }
+  },
+
+  terceros: {
+    mensajes: [
+      "¡Listo! De aquí sales asegurado, de eso se encarga <b>Segurotoy</b>. 🚗✅",
+      "¿Ya sabes de cuánta cobertura o límite para cubrir los daños a terceros lo quieres? ¿O tienes algún presupuesto?"
+    ],
+    respuestaCliente: {
+      texto: "Ando buscando el seguro ese que es para el revisado",
+      destino: "terceros_obligatorio"
+    }
+  },
+
+  terceros_obligatorio: {
+    mensajes: [
+      "Ese seguro que necesitas es el que le llaman <b>seguro obligatorio o SOAT</b> y tiene el límite de terceros más bajo posible: son solo <b>$5,000 por accidente</b>.",
+      "⚠️ Ojo: $5,000 <b>no alcanza</b> para cubrir los daños de un accidente, por ejemplo con un auto de lujo. Entonces puedes quedar <b>pagando de tu bolsillo</b> lo que el seguro no cubre."
+    ],
+    respuestaCliente: {
+      texto: "Entiendo... ¿y cuánto me cuesta?",
+      destino: "terceros_planes"
+    }
+  },
+
+  terceros_planes: {
+    mensajes: [
+      "Ese seguro obligatorio o SOAT tiene un costo de <b>$110.00 al año</b>, es el más económico y es con <b>Seguros Fedpa</b>. 💵",
+      "Pero mira 👀 por solo <b>$43.00 adicionales</b> puedes comprar <b>el doble de la cobertura</b>, es decir, compras <b>$10,000 de límite a terceros</b> y lo demás sigue igual. O por <b>$55.00</b> doblas la cobertura y también incluyes <b>cobertura médica para los pasajeros</b> de tu auto. 🏥",
+      "Yo te recomiendo que subas de plan. Dormir tranquilo sin deudas <b>no tiene precio</b>. 😌",
+      "Entonces, ¿subimos la tranquilidad? 🙌 El de <b>$153.00</b> o el que incluye pasajeros por <b>$165.00</b>.<br><br>Recuerda que lo puedes pagar en <b>3 mensualidades por descuento a tu tarjeta de crédito</b> 💳 o en un solo pago con <b>Yappy</b> o con la tarjeta."
+    ],
+    respuestaCliente: {
+      texto: "Puede ser... 🤔",
+      destino: "terceros_tramite"
+    }
+  },
+
+  terceros_tramite: {
+    mensajes: [
+      "El trámite es más rápido que lo que dura la luz verde. 🚦😄",
+      "Solo me tienes que subir fotos de tu <b>licencia</b> 🪪, <b>cédula</b> y <b>registro de propiedad</b> del auto. Con eso ya tengo la información para hacer tu seguro.",
+      "Luego te mando el <b>link de pago</b> que gustes, o para la tarjeta 💳 o Yappy, ¡y listo! Puedes decir...",
+      "🎉 <b>¡Toy seguro con Segurotoy!</b> 🛡️"
+    ],
+    respuestaCliente: {
+      texto: "Ok, vamos con el que incluye pasajeros 🙌",
+      destino: "compra_plan_doble_medica"
+    }
+  },
+
+  compra_plan_basico: {
+    mensajes: ["<i>[Nodo pendiente: compra del plan básico $110 — datos del cliente y del auto, pago]</i>"],
+    menu: { titulo: "¿Qué sigue?", opciones: [ { etiqueta: "⬅️ Menú principal", destino: "inicio" } ] }
+  },
+
+  compra_plan_doble: {
+    mensajes: ["<i>[Nodo pendiente: compra del plan doble cobertura $153 — datos del cliente y del auto, pago]</i>"],
+    menu: { titulo: "¿Qué sigue?", opciones: [ { etiqueta: "⬅️ Menú principal", destino: "inicio" } ] }
+  },
+
+  compra_plan_doble_medica: {
+    mensajes: [
+      "¡¡Bieeeeen!! 🎉🥳🙌 ¡Excelente decisión!",
+      "Aquí el link para que subas la foto de tu <b>licencia</b> 🪪, <b>cédula</b> y <b>registro</b>:<br><br>👉 <span style='color:#027EB5; text-decoration:underline;'>segurotoy.com/subir-documentos</span>",
+      "Sigue con esto y una vez los subas te paso el <b>link de pago</b>. 💳✨"
+    ],
+    respuestaCliente: {
+      texto: "Ya subí todo ✅",
+      destino: "documentos_recibidos"
+    }
+  },
+
+  documentos_recibidos: {
+    mensajes: [
+      "¡Muchas gracias! 🙏 Sí, ya lo vi, todo en orden. ✅",
+      "Aquí te paso el link de pago 👇"
+    ],
+    menu: {
+      titulo: "💳 Elige tu forma de pago",
+      autoElegir: 0,
+      opciones: [
+        { etiqueta: "📱 Yappy — un solo pago ($165.00)",              destino: "pago_confirmado" },
+        { etiqueta: "💳 Tarjeta de crédito — 3 pagos de $55.00",      destino: "pago_confirmado" }
+      ]
+    }
+  },
+
+  pago_confirmado: {
+    mensajes: [
+      "¡Pago recibido! 🥳🎉",
+      "Aquí está tu seguro. 📄 <b>Descárgalo</b> para que, si la policía te lo pide, lo puedas enseñar. 👮‍♂️<br><br><span style='display:flex;align-items:center;gap:8px;background:#f5f5f5;border-radius:8px;padding:8px 10px;margin-top:6px;'><span style='font-size:26px;'>📄</span><span style='font-size:13px;'><b>Poliza-Segurotoy.pdf</b><br><span style='color:#8a8a8a;'>1 página · 240 KB · PDF</span></span></span>",
+      "También te estoy pasando los <b>números de asistencia de la aseguradora</b>. Si tienes alguna colisión, puedes contactarte con ellos: 📞<br><br>🚨 Asistencia Fedpa: <b>800-0000</b><br>📱 WhatsApp: <b>6000-0000</b>",
+      "Y algo más 😉 ese plan que compraste también te incluye los siguientes <b>servicios de asistencia vial</b>:<br><br>🛻 Una grúa al año por colisión, hasta un monto de <b>$100.00</b><br>🔧 Una grúa por daño mecánico, hasta <b>$125.00</b><br>🛞 Servicio de cambio de llantas<br>🔋 Pase de corriente<br>⛽ Gasolina",
+      "🎉 <b>¡Ya toy seguro con Segurotoy!</b> 🛡️ Gracias por tu compra. Si necesitas algo más, aquí estoy. 🙌"
+    ],
+    menu: { titulo: "Fin de la demo", opciones: [ { etiqueta: "↺ Volver al menú principal", destino: "inicio" } ] }
+  },
+
+  terceros_cobertura: {
+    mensajes: ["<i>[Nodo pendiente: el bot muestra los límites de cobertura disponibles para elegir]</i>"],
+    menu: { titulo: "¿Qué sigue?", opciones: [ { etiqueta: "⬅️ Menú principal", destino: "inicio" } ] }
+  },
+
+  terceros_presupuesto: {
+    mensajes: ["<i>[Nodo pendiente: el bot pregunta el monto del presupuesto y ofrece la mejor cobertura que alcance]</i>"],
+    menu: { titulo: "¿Qué sigue?", opciones: [ { etiqueta: "⬅️ Menú principal", destino: "inicio" } ] }
+  },
+
+  terceros_orientar: {
+    mensajes: ["<i>[Nodo pendiente: el bot explica qué cubre el seguro de terceros y recomienda un límite]</i>"],
+    menu: { titulo: "¿Qué sigue?", opciones: [ { etiqueta: "⬅️ Menú principal", destino: "inicio" } ] }
+  },
+
+  cobertura_completa: {
+    mensajes: [
+      "🛡️ ¡Excelente! Vamos a cotizar un seguro con cobertura de <b>colisión y robo</b> para tu auto.<br><br><i>[Nodo pendiente: pasos de cotización]</i>"
+    ],
+    menu: { titulo: "¿Qué sigue?", opciones: [ { etiqueta: "⬅️ Menú principal", destino: "inicio" } ] }
+  },
+
+  agente: {
+    mensajes: [
+      "👤 Te estamos conectando con uno de nuestros agentes.<br><br>Horario de atención: <b>Lun–Vie, 8:00 a. m. – 5:00 p. m.</b><br><br>Un agente te responderá en breve. ⏳"
+    ],
+    fin: true
+  }
+};
+
+/* ================= Motor del prototipo ================= */
+const chat = document.getElementById("chat");
+const rutaEl = document.getElementById("ruta");
+let ruta = [];
+
+function hora() {
+  return new Date().toLocaleTimeString("es-PA", { hour: "numeric", minute: "2-digit", hour12: true }).toLowerCase();
+}
+
+function agregarBurbuja(html, tipo) {
+  const b = document.createElement("div");
+  b.className = "burbuja " + tipo;
+  b.innerHTML = html + '<div class="hora">' + hora() + (tipo === "usuario" ? ' <span class="check">✓✓</span>' : "") + "</div>";
+  chat.appendChild(b);
+  bajarChat();
+  setTimeout(bajarChat, 300);
+}
+
+function mostrarEscribiendo() {
+  const e = document.createElement("div");
+  e.className = "escribiendo";
+  e.id = "escribiendo";
+  e.innerHTML = "<i></i><i></i><i></i>";
+  chat.appendChild(e);
+  chat.scrollTop = chat.scrollHeight;
+  document.getElementById("estado").textContent = "escribiendo...";
+}
+
+function quitarEscribiendo() {
+  const e = document.getElementById("escribiendo");
+  if (e) e.remove();
+  document.getElementById("estado").textContent = "en línea";
+}
+
+function agregarMenu(menu) {
+  const m = document.createElement("div");
+  m.className = "menu";
+  m.innerHTML = '<div class="menu-titulo">' + menu.titulo + "</div>";
+  const botones = [];
+  menu.opciones.forEach(op => {
+    const o = document.createElement("div");
+    o.className = "opcion";
+    o.textContent = op.etiqueta;
+    o.onclick = () => {
+      m.querySelectorAll(".opcion").forEach(x => x.classList.add("desactivada"));
+      elegir(op);
+    };
+    botones.push(o);
+    m.appendChild(o);
+  });
+  chat.appendChild(m);
+  bajarChat();
+  setTimeout(bajarChat, 300);
+  if (menu.autoElegir !== undefined) {
+    setTimeout(() => botones[menu.autoElegir].click(), 2500);
+  }
+}
+
+function bajarChat() {
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function irANodo(id) {
+  const nodo = FLUJO[id];
+  if (!nodo) return;
+  ruta.push(id);
+  rutaEl.textContent = ruta.join(" → ");
+
+  let retraso = 0;
+  nodo.mensajes.forEach((msg, i) => {
+    setTimeout(() => {
+      mostrarEscribiendo();
+      setTimeout(() => {
+        quitarEscribiendo();
+        agregarBurbuja(msg, "bot");
+        if (i === nodo.mensajes.length - 1) {
+          if (nodo.menu) setTimeout(() => agregarMenu(nodo.menu), 600);
+          if (nodo.respuestaCliente) {
+            const rc = nodo.respuestaCliente;
+            setTimeout(() => {
+              agregarBurbuja(rc.texto, "usuario");
+              setTimeout(() => irANodo(rc.destino), 900);
+            }, 2200);
+          }
+        }
+      }, 1300);
+    }, retraso);
+    retraso += 2200;
+  });
+}
+
+function elegir(opcion) {
+  agregarBurbuja(opcion.etiqueta, "usuario");
+  setTimeout(() => irANodo(opcion.destino), 400);
+}
+
+function reiniciar() {
+  chat.innerHTML =
+    '<div class="chip">Hoy</div>' +
+    '<div class="chip cifrado">🔒 Los mensajes están cifrados de extremo a extremo</div>';
+  ruta = [];
+  irANodo("inicio");
+}
+
+reiniciar();
+</script>
+</body>
+</html>
